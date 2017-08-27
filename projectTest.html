@@ -1,0 +1,191 @@
+<html style="text-align:center">
+  <canvas id="canvasElement" width=800 height=600 style="display:inline-block;border-style:solid;border-width:2px"/>
+
+  <script type="text/javascript" src="Core.js"></script>
+  <script type="text/javascript" src="teapot.js"></script>
+  <script type="text/javascript">
+    const canvasHeight = 600;
+    const canvasWidth = 800;
+
+    const vertexBuffer = [];
+
+    function getCanvasContext() {
+      const canvasElement = document.getElementById('canvasElement');
+      const context = canvasElement.getContext('2d');
+      return context;
+    }
+
+    function init() {
+      context = getCanvasContext();
+      context.translate(canvasWidth / 2, canvasHeight / 2);
+      // Load model into vertexBuffer.
+    }
+
+    let rotation = 0 * (Math.PI / 180);
+    function render() {
+      deltaTime = (Date.now() - previousTime) / 1000;
+      previousTime = Date.now();
+      rotation += 0.5 * deltaTime;
+      lightLocation.x = Math.cos(Date.now() / 500) * 500;
+
+      context = getCanvasContext();
+      context.clearRect(-canvasWidth / 2, -canvasHeight / 2, canvasWidth, canvasHeight);
+
+      // let verticies = [
+      //   new Vector4(10, -10, -10, 1),
+      //   new Vector4(-10, -10, -10, 1),
+      //   new Vector4(-10, 10, -10, 1),
+      //   new Vector4(10, 10, -10, 1),
+      //   new Vector4(10, -10, -10, 1),
+      //
+      //   new Vector4(10, -10, 10, 1),
+      //   new Vector4(-10, -10, 10, 1),
+      //   new Vector4(-10, 10, 10, 1),
+      //   new Vector4(10, 10, 10, 1),
+      //   new Vector4(10, -10, 10, 1),
+      //
+      //   new Vector4(10, -10, -10, 1),
+      //   new Vector4(10, 10, -10, 1),
+      //   new Vector4(10, 10, 10, 1),
+      //
+      //   new Vector4(-10, 10, 10, 1),
+      //   new Vector4(-10, 10, -10, 1),
+      //   new Vector4(-10, -10, -10, 1),
+      //   new Vector4(-10, -10, 10, 1),
+      // ];
+
+      const transformedVerts = [];
+      for (const vertex of teapotVerts) {
+        transformedVerts.push(transformVertex(vertex));
+      }
+
+      const canvas = new Canvas(context);
+
+      // Sort faces by distance before drawing.
+      /*
+      teapotFaces.sort((a,b) => {
+        const cameraPosition = new Vector4();
+
+        aCentroid = transformedVerts[a.v1 - 1].add(transformedVerts[a.v2 - 1]).add(transformedVerts[a.v3 - 1]).scale(1 / 3);
+        bCentroid = transformedVerts[b.v1 - 1].add(transformedVerts[b.v2 - 1]).add(transformedVerts[b.v3 - 1]).scale(1 / 3);
+
+        const aDistance = cameraPosition.distance(aCentroid);
+        const bDistance = cameraPosition.distance(bCentroid);
+        if (aDistance < bDistance) {
+          return 1;
+        }
+
+        if (aDistance > bDistance) {
+          return -1;
+        }
+
+        return 0;
+      });*/
+
+      for (const face of teapotFaces) {
+        let w1 = teapotVerts[face.v1 - 1];
+        let w2 = teapotVerts[face.v2 - 1];
+        let w3 = teapotVerts[face.v3 - 1];
+        let u1 = transformedVerts[face.v1 - 1];
+        let u2 = transformedVerts[face.v2 - 1];
+        let u3 = transformedVerts[face.v3 - 1];
+        let v1 = projectVertex(u1);
+        let v2 = projectVertex(u2);
+        let v3 = projectVertex(u3);
+
+
+        let temp = {v1, v2, v3};
+        let utemp = {u1, u2, u3};
+        debugger;
+
+        let generatedNormal = u2.subtract(u1).crossProduct(u3.subtract(u1)).normalized();
+
+        // Backface culling.
+        if (u1.scale(-1).dotProduct(generatedNormal) >= 0) { // If this face is pointed to our camera, draw it.
+          let faceColor = u2.subtract(u1).crossProduct(u3.subtract(u1)).normalized();
+          const red = Math.floor((faceColor.x + 1) / 2 * 255);
+          const green = Math.floor((faceColor.y + 1) / 2 * 255);
+          const blue = Math.floor((faceColor.z + 1) / 2 * 255);
+          const finalColor = new Vector4(red, green, blue, 255);
+          canvas.calculateFragment({v1, v2, v3}, finalColor);
+        }
+      }
+
+      canvas.submitImageData();
+
+      context.fillStyle = '#444444';
+      context.fillText(`Frame Time: ${deltaTime}`, (canvasWidth / -2) + 15, (canvasHeight / -2) + 20);
+      context.fillText(`Triangles: ${teapotFaces.length}`, (canvasWidth / -2) + 15, (canvasHeight / -2) + 40);
+      context.fillText(`Verticies: ${teapotVerts.length}`, (canvasWidth / -2) + 15, (canvasHeight / -2) + 60);
+    }
+
+    function transformVertex(vertex) {
+      let translationMatrix = new Matrix4();
+      translationMatrix.m00 = 1;
+      translationMatrix.m11 = 1;
+      translationMatrix.m22 = 1;
+      translationMatrix.m33 = 1;
+      translationMatrix.m32 = 40;
+      translationMatrix.m30 = 40;
+
+      let scaleMatrix = new Matrix4();
+      scaleMatrix.m00 = 8;
+      scaleMatrix.m11 = 8;
+      scaleMatrix.m22 = 8;
+      scaleMatrix.m33 = 1;
+      let scaled = scaleMatrix.multiply(vertex);
+
+      // Rotate around Y-axis
+      const rotated = new Vector4();
+      const angleCos = Math.cos(rotation);
+      const angleSin = Math.sin(rotation);
+      rotated.x = scaled.x * angleCos + scaled.z * angleSin;
+      rotated.z = -scaled.x * angleSin + scaled.z * angleCos;
+
+      // rotated.x = vertex.x * angleCos + vertex.z * angleSin;
+      // rotated.y = vertex.y;
+      //rotated.z = -vertex.x * angleSin + vertex.z * angleCos;
+      rotated.y = scaled.y;
+      rotated.w = scaled.w;
+
+      // Translate forward.
+      const translated = rotated;
+      translated.z += 40;
+      translated.y -= 10;
+
+      return translated;
+    }
+
+    const perspectiveMatrix = makePerspective(0.25 * (Math.PI / 180), canvasWidth / canvasHeight, nearPlane, farPlane);
+    function projectVertex(vertex) {
+
+      // Multiply by our projection matrix to get screen coordinates.
+      let projected = perspectiveMatrix.multiply(vertex);
+      return projected;
+    }
+    let projectionTest01 = projectVertex(new Vector4(0,0,0)).z;
+    let projectionTest0 = projectVertex(new Vector4(0,0,nearPlane)).z;
+    let projectionTest1 = projectVertex(new Vector4(0,0,1.5)).z;
+    let projectionTest342 = projectVertex(new Vector4(0,0,1.98)).z;
+    let projectionTest2 = projectVertex(new Vector4(0,0,farPlane * 0.1)).z;
+    let projectionTest3 = projectVertex(new Vector4(0,0,farPlane * 0.25)).z;
+    let projectionTest4 = projectVertex(new Vector4(0,0,farPlane * 0.5)).z;
+    let projectionTest5 = projectVertex(new Vector4(0,0,farPlane * 0.75)).z;
+    let projectionTest6 = projectVertex(new Vector4(0,0,farPlane * 0.99)).z;
+    let projectionTest7 = projectVertex(new Vector4(0,0,farPlane * 1)).z;
+    let projectionTest8 = projectVertex(new Vector4(0,0,farPlane * 1.25)).z;
+    debugger;
+
+    function gameLoop() {
+      window.requestAnimationFrame(gameLoop);
+      render();
+    }
+
+    const frameLimit = 30;
+    let deltaTime = 1000 / frameLimit;
+    let previousTime = Date.now();
+
+    init();
+    gameLoop();
+  </script>
+</html>
