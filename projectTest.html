@@ -15,10 +15,39 @@
       return context;
     }
 
+    let vertexNormals = [];
     function init() {
       context = getCanvasContext();
       context.translate(canvasWidth / 2, canvasHeight / 2);
+
       // Load model into vertexBuffer.
+
+      // Calculate vertex normals.
+      for (let index = 0; index < teapotVerts.length; index++) {
+        for (const triangle of teapotFaces) {
+          if (triangle.v1 - 1 === index || triangle.v2 - 1 === index || triangle.v3 - 1 === index) {
+            // This face is using our vertex so let's calculate normal.
+            const v1 = teapotVerts[triangle.v1 - 1];
+            const v2 = teapotVerts[triangle.v2 - 1];
+            const v3 = teapotVerts[triangle.v3 - 1];
+            const faceNormal = v2.subtract(v1).crossProduct(v3.subtract(v1)).normalized();
+            vertexNormals[index] = vertexNormals[index] || [];
+            vertexNormals[index].push(faceNormal);
+          }
+        }
+      }
+
+      for (let index = 0; index < vertexNormals.length; index++) {
+        const normalsList = vertexNormals[index];
+        let output = new Vector4(0,0,0);
+        for (const normal of normalsList) {
+          output.x += normal.x;
+          output.y += normal.y;
+          output.z += normal.z;
+        }
+        output = output.normalized();
+        vertexNormals[index] = output;
+      }
     }
 
     let rotation = 0 * (Math.PI / 180);
@@ -102,12 +131,16 @@
 
         // Backface culling.
         if (u1.scale(-1).dotProduct(generatedNormal) >= 0) { // If this face is pointed to our camera, draw it.
+          let n1 = vertexNormals[face.v1 - 1];
+          let n2 = vertexNormals[face.v2 - 1];
+          let n3 = vertexNormals[face.v3 - 1];
+
           let faceColor = u2.subtract(u1).crossProduct(u3.subtract(u1)).normalized();
           const red = Math.floor((faceColor.x + 1) / 2 * 255);
           const green = Math.floor((faceColor.y + 1) / 2 * 255);
           const blue = Math.floor((faceColor.z + 1) / 2 * 255);
           const finalColor = new Vector4(red, green, blue, 255);
-          canvas.calculateFragment({v1, v2, v3}, finalColor);
+          canvas.calculateFragment({v1, v2, v3}, {n1, n2, n3}, finalColor);
         }
       }
 
