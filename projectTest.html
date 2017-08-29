@@ -55,7 +55,7 @@
       deltaTime = (Date.now() - previousTime) / 1000;
       previousTime = Date.now();
       rotation += 0.5 * deltaTime;
-      lightLocation.x = Math.cos(Date.now() / 500) * 500;
+      lightLocation.x = Math.cos(Date.now() / 1000) * 400;
 
       context = getCanvasContext();
       context.clearRect(-canvasWidth / 2, -canvasHeight / 2, canvasWidth, canvasHeight);
@@ -211,7 +211,7 @@
     let projectionTest6 = projectVertex(new Vector4(0,0,farPlane * 0.99)).z;
     let projectionTest7 = projectVertex(new Vector4(0,0,farPlane * 1)).z;
     let projectionTest8 = projectVertex(new Vector4(0,0,farPlane * 1.25)).z;
-    debugger;
+    // debugger;
 
     function gameLoop() {
       window.requestAnimationFrame(gameLoop);

@@ -66,7 +66,7 @@ class Vector4 {
     output.x = this.x * val;
     output.y = this.y * val;
     output.z = this.z * val;
-    output.w = this.w * val;
+    output.w = this.w;
     return output;
   }
 
@@ -145,6 +145,15 @@ class Vector4 {
     return output;
   }
 
+  negated() {
+    const output = new Vector4();
+    output.x = -this.x;
+    output.y = -this.y;
+    output.z = -this.z;
+    output.w = 1;
+    return output;
+  }
+
   perpendicular() {
     return new Vector4(-this.y, this.x);
   }
@@ -181,7 +190,7 @@ function makePerspective(fov, ratio, near, far) {
   return output;
 }
 
-let lightLocation = new Vector4(0, 0, 0);
+let lightLocation = new Vector4(0, 200, farPlane * 0.05);
 class Canvas {
   constructor(context) {
     this.context = context;
@@ -239,39 +248,61 @@ class Canvas {
 
     for (let x = Math.round(topLeft.x); x <= bottomRight.x; x++) {
       for (let y = Math.round(topLeft.y); y <= bottomRight.y; y++) {
-        const pixelCoord = {x: x + 0.5, y: y + 0.5};
+        const pixelCoord = new Vector4(x + 0.5, y + 0.5);
 
         // First clip any points off screen.
         const onScreen = this.isPixelInScreenSpace(x, y);
 
         // Check if this point is on our triangle then shade the pixel if it is.
         if (onScreen && pointInTriangle({x, y}, face)) {
-          // const centroid = face.v1.add(face.v2).add(face.v3).scale(1 / 3);
-          // let lightDirection = lightLocation.subtract(centroid).normalized();
-          // const crossValue = lightDirection.dotProduct(color.normalized());
-          // const luminance = (crossValue + 1) / 2 * 255 * centroid.distance(lightLocation) * 0.0015;
-          // let finalColor = color.scale(luminance / 255);
-          // finalColor.w = 255;
-
           const barycentric = new Vector4(
             edgeCheck(face.v2, face.v3, pixelCoord) / area,
             edgeCheck(face.v3, face.v1, pixelCoord) / area,
             edgeCheck(face.v1, face.v2, pixelCoord) / area
           )
 
-          let interpolatedDepth = (1 / (barycentric.x * (1 / face.v1.z) + barycentric.y * (1 / face.v2.z) + barycentric.z * (1 / face.v3.z)));
+          // Set our pixel's Z value to our interpolated depth.
+          pixelCoord.z = (1 / (barycentric.x * (1 / face.v1.z) + barycentric.y * (1 / face.v2.z) + barycentric.z * (1 / face.v3.z)));
+
           let currentDepth = this.getDepth({x, y});
-          if (interpolatedDepth >= -1 && interpolatedDepth <= 1 && interpolatedDepth < currentDepth) {
+          if (pixelCoord.z >= -1 && pixelCoord.z <= 1 && pixelCoord.z < currentDepth) {
             const interpolatedNormal =
               normals.n1.scale(barycentric.x).add(
               normals.n2.scale(barycentric.y)).add(
               normals.n3.scale(barycentric.z));
+            interpolatedNormal.w = 0;
 
+            // Convert normal to rgb.
             const red = Math.floor((interpolatedNormal.x + 1) / 2 * 255);
             const green = Math.floor((interpolatedNormal.y + 1) / 2 * 255);
             const blue = Math.floor((interpolatedNormal.z + 1) / 2 * 255);
-            const finalColor = new Vector4(red, green, blue, 255);
-            this.setPixel({x, y}, finalColor, interpolatedDepth);
+
+            // Calculate shading.
+            const diffuseTerm = 0.4;
+            const specularTerm = 1;
+            const shininessTerm = 10;
+            const ambientTerm = 0.6;
+            const ambientColor = new Vector4(255,255,255,255);
+            let lightDirection = lightLocation.subtract(pixelCoord).normalized();
+
+            // Bad hack for not writing an actual vector3 class.
+            lightDirection.w = 0;
+            pixelCoord.w = 0;
+
+            let reflectedLightDirection = lightDirection.add(interpolatedNormal.scale(2 * lightDirection.dotProduct(interpolatedNormal)));
+            let eyeDirection = new Vector4(0,0,0).subtract(pixelCoord).normalized();
+            reflectedLightDirection.w = 0;
+            eyeDirection.w = 0;
+
+            const lightNormDot = lightDirection.dotProduct(interpolatedNormal);
+            const reflectionEyeDot = reflectedLightDirection.dotProduct(eyeDirection);
+            const calculatedAmbient = ambientTerm + lightNormDot * diffuseTerm;
+            const calculatedSpecular = specularTerm * Math.pow(reflectionEyeDot, shininessTerm);
+            const illumination = calculatedAmbient;
+            debugger;
+
+            const finalColor = new Vector4(255, 255, 255, 255);
+            this.setPixel({x, y}, finalColor.scale(illumination), pixelCoord.z);
           }
         }
       }
@@ -287,6 +318,10 @@ class Canvas {
   submitImageData() {
     this.context.putImageData(this.imageData, 0, 0);
   }
+}
+
+function clamp(input, min, max) {
+  return Math.min(Math.max(input, min), max);
 }
 
 function pointInTriangle(point, triangle) {
