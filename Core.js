@@ -259,41 +259,13 @@ class Canvas {
             edgeCheck(face.v1, face.v2, pixelCoord) / area
           )
 
-          // let interpolatedDepth = (barycentric.x * v1PixelDepth + barycentric.y * v2PixelDepth + barycentric.z * v3PixelDepth) * 255;
-          //let temp = interpolatedDepth * interpolatedDepth / 1 * 255;
-          // let testColor = new Vector4(interpolatedDepth, interpolatedDepth, interpolatedDepth, 255);
           let interpolatedDepth = (1 / (barycentric.x * (1 / face.v1.z) + barycentric.y * (1 / face.v2.z) + barycentric.z * (1 / face.v3.z)));
           let currentDepth = this.getDepth({x, y});
           if (interpolatedDepth >= -1 && interpolatedDepth <= 1 && interpolatedDepth < currentDepth) {
-            // let interpolatedNorm1 = {
-            //   x: barycentric.x * (1 / normals.n1.x),
-            //   y: barycentric.x * (1 / normals.n1.y),
-            //   z: barycentric.x * (1 / normals.n1.z)
-            // };
-
-            // let interpolatedNorm2 = {
-            //   x: barycentric.y * (1 / normals.n2.x),
-            //   y: barycentric.y * (1 / normals.n2.y),
-            //   z: barycentric.y * (1 / normals.n2.z)
-            // };
-
-            // let interpolatedNorm3 = {
-            //   x: barycentric.z * (1 / normals.n3.x),
-            //   y: barycentric.z * (1 / normals.n3.y),
-            //   z: barycentric.z * (1 / normals.n3.z)
-            // };
-
-            // let interpolatedNormal = {
-            //   x: 1 / (interpolatedNorm1.x + interpolatedNorm2.x + interpolatedNorm3.x),
-            //   y: 1 / (interpolatedNorm1.y + interpolatedNorm2.y + interpolatedNorm3.y),
-            //   z: 1 / (interpolatedNorm1.z + interpolatedNorm2.z + interpolatedNorm3.z)
-            // };
-
             const interpolatedNormal =
               normals.n1.scale(barycentric.x).add(
               normals.n2.scale(barycentric.y)).add(
               normals.n3.scale(barycentric.z));
-            debugger;
 
             const red = Math.floor((interpolatedNormal.x + 1) / 2 * 255);
             const green = Math.floor((interpolatedNormal.y + 1) / 2 * 255);

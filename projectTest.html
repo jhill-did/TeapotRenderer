@@ -83,11 +83,6 @@
       //   new Vector4(-10, -10, 10, 1),
       // ];
 
-      const transformedVerts = [];
-      for (const vertex of teapotVerts) {
-        transformedVerts.push(transformVertex(vertex));
-      }
-
       const canvas = new Canvas(context);
 
       // Sort faces by distance before drawing.
@@ -115,25 +110,34 @@
         let w1 = teapotVerts[face.v1 - 1];
         let w2 = teapotVerts[face.v2 - 1];
         let w3 = teapotVerts[face.v3 - 1];
-        let u1 = transformedVerts[face.v1 - 1];
-        let u2 = transformedVerts[face.v2 - 1];
-        let u3 = transformedVerts[face.v3 - 1];
+        let u1 = transformVertex(w1) // transformedVerts[face.v1 - 1];
+        let u2 = transformVertex(w2) // transformedVerts[face.v2 - 1];
+        let u3 = transformVertex(w3) // transformedVerts[face.v3 - 1];
         let v1 = projectVertex(u1);
         let v2 = projectVertex(u2);
         let v3 = projectVertex(u3);
 
 
-        let temp = {v1, v2, v3};
-        let utemp = {u1, u2, u3};
-        debugger;
+        // let temp = {v1, v2, v3};
+        // let utemp = {u1, u2, u3};
+        // debugger;
 
         let generatedNormal = u2.subtract(u1).crossProduct(u3.subtract(u1)).normalized();
 
         // Backface culling.
         if (u1.scale(-1).dotProduct(generatedNormal) >= 0) { // If this face is pointed to our camera, draw it.
-          let n1 = vertexNormals[face.v1 - 1];
-          let n2 = vertexNormals[face.v2 - 1];
-          let n3 = vertexNormals[face.v3 - 1];
+          const rotateNormal  = (normal) => {
+            const rotationMatrix = new Matrix4();
+            rotationMatrix.m00 = Math.cos(rotation);
+            rotationMatrix.m11 = 1;
+            rotationMatrix.m22 = Math.cos(rotation);
+            rotationMatrix.m20 = -Math.sin(rotation);
+            rotationMatrix.m02 = Math.sin(rotation);
+            return rotationMatrix.multiply(normal);
+          };
+          let n1 = rotateNormal(vertexNormals[face.v1 - 1]);
+          let n2 = rotateNormal(vertexNormals[face.v2 - 1]);
+          let n3 = rotateNormal(vertexNormals[face.v3 - 1]);
 
           let faceColor = u2.subtract(u1).crossProduct(u3.subtract(u1)).normalized();
           const red = Math.floor((faceColor.x + 1) / 2 * 255);
