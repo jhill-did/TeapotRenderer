@@ -2,8 +2,11 @@
   <canvas id="canvasElement" width=800 height=600 style="display:inline-block;border-style:solid;border-width:2px"/>
 
   <script type="text/javascript" src="Core.js"></script>
+  <script type="text/javascript" src="ObjLoader.js"></script>
+  <script type="text/javascript" src="Torus.obj.js"></script>
   <script type="text/javascript" src="teapot.js"></script>
   <script type="text/javascript">
+
     const canvasHeight = 600;
     const canvasWidth = 800;
 
@@ -21,33 +24,37 @@
       context.translate(canvasWidth / 2, canvasHeight / 2);
 
       // Load model into vertexBuffer.
+      const sphereGeo = loadObj(torusData);
+      teapotVerts = sphereGeo.vertices;
+      vertexNormals = sphereGeo.normals;
+      teapotFaces = sphereGeo.triangles;
 
       // Calculate vertex normals.
-      for (let index = 0; index < teapotVerts.length; index++) {
-        for (const triangle of teapotFaces) {
-          if (triangle.v1 - 1 === index || triangle.v2 - 1 === index || triangle.v3 - 1 === index) {
-            // This face is using our vertex so let's calculate normal.
-            const v1 = teapotVerts[triangle.v1 - 1];
-            const v2 = teapotVerts[triangle.v2 - 1];
-            const v3 = teapotVerts[triangle.v3 - 1];
-            const faceNormal = v2.subtract(v1).crossProduct(v3.subtract(v1)).normalized();
-            vertexNormals[index] = vertexNormals[index] || [];
-            vertexNormals[index].push(faceNormal);
-          }
-        }
-      }
+      // for (let index = 0; index < teapotVerts.length; index++) {
+      //   for (const triangle of teapotFaces) {
+      //     if (triangle.v1 - 1 === index || triangle.v2 - 1 === index || triangle.v3 - 1 === index) {
+      //       // This face is using our vertex so let's calculate normal.
+      //       const v1 = teapotVerts[triangle.v1 - 1];
+      //       const v2 = teapotVerts[triangle.v2 - 1];
+      //       const v3 = teapotVerts[triangle.v3 - 1];
+      //       const faceNormal = v2.subtract(v1).crossProduct(v3.subtract(v1)).normalized();
+      //       vertexNormals[index] = vertexNormals[index] || [];
+      //       vertexNormals[index].push(faceNormal);
+      //     }
+      //   }
+      // }
 
-      for (let index = 0; index < vertexNormals.length; index++) {
-        const normalsList = vertexNormals[index];
-        let output = new Vector4(0,0,0);
-        for (const normal of normalsList) {
-          output.x += normal.x;
-          output.y += normal.y;
-          output.z += normal.z;
-        }
-        output = output.normalized();
-        vertexNormals[index] = output;
-      }
+      // for (let index = 0; index < vertexNormals.length; index++) {
+      //   const normalsList = vertexNormals[index];
+      //   let output = new Vector4(0,0,0);
+      //   for (const normal of normalsList) {
+      //     output.x += normal.x;
+      //     output.y += normal.y;
+      //     output.z += normal.z;
+      //   }
+      //   output = output.normalized();
+      //   vertexNormals[index] = output;
+      // }
     }
 
     let rotation = 0 * (Math.PI / 180);
@@ -55,7 +62,10 @@
       deltaTime = (Date.now() - previousTime) / 1000;
       previousTime = Date.now();
       rotation += 0.5 * deltaTime;
-      lightLocation.x = Math.cos(Date.now() / 1000) * 400;
+      // rotation = 180 * (Math.PI / 180);
+      lightLocation.x = Math.cos(Date.now() / 500) * 400;
+      //lightLocation.z = Math.sin(Date.now() / 500) * 400 + 40;
+      // lightLocation.x = -300;
 
       context = getCanvasContext();
       context.clearRect(-canvasWidth / 2, -canvasHeight / 2, canvasWidth, canvasHeight);
@@ -106,21 +116,16 @@
         return 0;
       });*/
 
-      for (const face of teapotFaces) {
-        let w1 = teapotVerts[face.v1 - 1];
-        let w2 = teapotVerts[face.v2 - 1];
-        let w3 = teapotVerts[face.v3 - 1];
-        let u1 = transformVertex(w1) // transformedVerts[face.v1 - 1];
-        let u2 = transformVertex(w2) // transformedVerts[face.v2 - 1];
-        let u3 = transformVertex(w3) // transformedVerts[face.v3 - 1];
+      for (const triangle of teapotFaces) {
+        let w1 = teapotVerts[triangle.vertices.v1];
+        let w2 = teapotVerts[triangle.vertices.v2];
+        let w3 = teapotVerts[triangle.vertices.v3];
+        let u1 = transformVertex(w1)
+        let u2 = transformVertex(w2)
+        let u3 = transformVertex(w3)
         let v1 = projectVertex(u1);
         let v2 = projectVertex(u2);
         let v3 = projectVertex(u3);
-
-
-        // let temp = {v1, v2, v3};
-        // let utemp = {u1, u2, u3};
-        // debugger;
 
         let generatedNormal = u2.subtract(u1).crossProduct(u3.subtract(u1)).normalized();
 
@@ -135,16 +140,16 @@
             rotationMatrix.m02 = Math.sin(rotation);
             return rotationMatrix.multiply(normal);
           };
-          let n1 = rotateNormal(vertexNormals[face.v1 - 1]);
-          let n2 = rotateNormal(vertexNormals[face.v2 - 1]);
-          let n3 = rotateNormal(vertexNormals[face.v3 - 1]);
+          let n1 = rotateNormal(vertexNormals[triangle.normals.v1]);
+          let n2 = rotateNormal(vertexNormals[triangle.normals.v2]);
+          let n3 = rotateNormal(vertexNormals[triangle.normals.v3]);
 
           let faceColor = u2.subtract(u1).crossProduct(u3.subtract(u1)).normalized();
           const red = Math.floor((faceColor.x + 1) / 2 * 255);
           const green = Math.floor((faceColor.y + 1) / 2 * 255);
           const blue = Math.floor((faceColor.z + 1) / 2 * 255);
           const finalColor = new Vector4(red, green, blue, 255);
-          canvas.calculateFragment({v1, v2, v3}, {n1, n2, n3}, finalColor);
+          canvas.calculateFragment({w1: u1, w2: u2, w3: u3}, {v1, v2, v3}, {n1, n2, n3}, finalColor);
         }
       }
 
@@ -153,7 +158,8 @@
       context.fillStyle = '#444444';
       context.fillText(`Frame Time: ${deltaTime}`, (canvasWidth / -2) + 15, (canvasHeight / -2) + 20);
       context.fillText(`Triangles: ${teapotFaces.length}`, (canvasWidth / -2) + 15, (canvasHeight / -2) + 40);
-      context.fillText(`Verticies: ${teapotVerts.length}`, (canvasWidth / -2) + 15, (canvasHeight / -2) + 60);
+      context.fillText(`Vertices: ${teapotVerts.length}`, (canvasWidth / -2) + 15, (canvasHeight / -2) + 60);
+      context.fillText(`Light: (${lightLocation.x},${lightLocation.y},${lightLocation.z})`, (canvasWidth / -2) + 15, (canvasHeight / -2) + 80);
     }
 
     function transformVertex(vertex) {
@@ -166,9 +172,9 @@
       translationMatrix.m30 = 40;
 
       let scaleMatrix = new Matrix4();
-      scaleMatrix.m00 = 8;
-      scaleMatrix.m11 = 8;
-      scaleMatrix.m22 = 8;
+      scaleMatrix.m00 = 12;
+      scaleMatrix.m11 = 12;
+      scaleMatrix.m22 = 12;
       scaleMatrix.m33 = 1;
       let scaled = scaleMatrix.multiply(vertex);
 
@@ -179,16 +185,13 @@
       rotated.x = scaled.x * angleCos + scaled.z * angleSin;
       rotated.z = -scaled.x * angleSin + scaled.z * angleCos;
 
-      // rotated.x = vertex.x * angleCos + vertex.z * angleSin;
-      // rotated.y = vertex.y;
-      //rotated.z = -vertex.x * angleSin + vertex.z * angleCos;
       rotated.y = scaled.y;
       rotated.w = scaled.w;
 
       // Translate forward.
       const translated = rotated;
       translated.z += 40;
-      translated.y -= 10;
+      translated.y -= 0;
 
       return translated;
     }
