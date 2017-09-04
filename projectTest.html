@@ -3,7 +3,7 @@
 
   <script type="text/javascript" src="Core.js"></script>
   <script type="text/javascript" src="ObjLoader.js"></script>
-  <script type="text/javascript" src="Torus.obj.js"></script>
+  <script type="text/javascript" src="Cube.obj.js"></script>
   <script type="text/javascript" src="teapot.js"></script>
   <script type="text/javascript">
 
@@ -24,10 +24,11 @@
       context.translate(canvasWidth / 2, canvasHeight / 2);
 
       // Load model into vertexBuffer.
-      const sphereGeo = loadObj(torusData);
+      const sphereGeo = loadObj(cubeData);
       teapotVerts = sphereGeo.vertices;
       vertexNormals = sphereGeo.normals;
       teapotFaces = sphereGeo.triangles;
+      teapotUvs = sphereGeo.uvs;
 
       // Calculate vertex normals.
       // for (let index = 0; index < teapotVerts.length; index++) {
@@ -127,6 +128,10 @@
         let v2 = projectVertex(u2);
         let v3 = projectVertex(u3);
 
+        let uv1 = teapotUvs[triangle.uvs.v1];
+        let uv2 = teapotUvs[triangle.uvs.v2];
+        let uv3 = teapotUvs[triangle.uvs.v3];
+
         let generatedNormal = u2.subtract(u1).crossProduct(u3.subtract(u1)).normalized();
 
         // Backface culling.
@@ -149,7 +154,7 @@
           const green = Math.floor((faceColor.y + 1) / 2 * 255);
           const blue = Math.floor((faceColor.z + 1) / 2 * 255);
           const finalColor = new Vector4(red, green, blue, 255);
-          canvas.calculateFragment({w1: u1, w2: u2, w3: u3}, {v1, v2, v3}, {n1, n2, n3}, finalColor);
+          canvas.calculateFragment({v1: uv1, v2: uv2, v3: uv3}, {w1: u1, w2: u2, w3: u3}, {v1, v2, v3}, {n1, n2, n3}, finalColor);
         }
       }
 

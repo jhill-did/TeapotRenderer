@@ -225,7 +225,7 @@ class Canvas {
     return this.zBuffer[index];
   }
 
-  calculateFragment(worldSpace, face, normals, color) {
+  calculateFragment(uvs, worldSpace, face, normals, color) {
     let topLeft = {
       x: Math.min(face.v1.x, face.v2.x, face.v3.x),
       y: Math.min(face.v1.y, face.v2.y, face.v3.y)
@@ -286,10 +286,20 @@ class Canvas {
               normals.n3.scale(barycentric.z)).scale(pixelCoord.z);
             interpolatedNormal.w = 0;
 
+            const interpolatedUv =
+              uvs.v1.scale(barycentric.x).add(
+              uvs.v2.scale(barycentric.y).add(
+              uvs.v3.scale(barycentric.z))).scale(pixelCoord.z);
+            interpolatedUv.w = 0;
+
             // Convert normal to rgb.
-            const red = Math.floor((interpolatedNormal.x + 1) / 2 * 255);
-            const green = Math.floor((interpolatedNormal.y + 1) / 2 * 255);
-            const blue = Math.floor((interpolatedNormal.z + 1) / 2 * 255);
+            // const red = Math.floor((interpolatedNormal.x + 1) / 2 * 255);
+            // const green = Math.floor((interpolatedNormal.y + 1) / 2 * 255);
+            // const blue = Math.floor((interpolatedNormal.z + 1) / 2 * 255);
+
+            const red = Math.floor(interpolatedUv.x * 255);
+            const green = Math.floor(interpolatedUv.y * 255);
+            const blue = Math.floor(interpolatedUv.z * 255);
 
             // Calculate shading.
             const diffuseTerm = 0.75;
@@ -305,7 +315,6 @@ class Canvas {
             pixelCoord.w = 0;
 
             const reflectedLightDirection = flippedLightDirection.subtract(interpolatedNormal.scale(2).scale(dot(flippedLightDirection, interpolatedNormal))).normalized();
-            // const reflectedLightDirection = lightDirection.negated().add(interpolatedNormal.scale(2 * dot(lightDirection, interpolatedNormal))).normalized()
             let eyeDirection = cameraLocation.subtract(worldSpaceCoord).normalized();
             reflectedLightDirection.w = 0;
             eyeDirection.w = 0;
@@ -317,7 +326,7 @@ class Canvas {
             const cameraAngle = Math.max(dot(eyeDirection, interpolatedNormal), 0);
             const illumination = calculatedAmbient +  calculatedSpecular;
 
-            const finalColor = new Vector4(red, green, 255, 255);
+            const finalColor = new Vector4(red, green, 0, 255);
             this.setPixel({x, y}, finalColor.scale(illumination), pixelCoord.z);
           }
         }
@@ -371,4 +380,10 @@ function pointInTriangle(point, triangle) {
 
   return w1 <= 0 && w2 <= 0 && w3 <= 0; // b2 && b2 === b3;
   return Boolean(overlaps);
+}
+
+class Texture {
+  constructor() {
+
+  }
 }
