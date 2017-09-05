@@ -1,9 +1,12 @@
 <html style="text-align:center">
   <canvas id="canvasElement" width=800 height=600 style="display:inline-block;border-style:solid;border-width:2px"/>
 
+  <img id="textureImage" src="checkeredmap.jpg" alt="The Scream" width="1024" height="1024" style="display:none">
+
   <script type="text/javascript" src="Core.js"></script>
   <script type="text/javascript" src="ObjLoader.js"></script>
   <script type="text/javascript" src="Cube.obj.js"></script>
+  <script type="text/javascript" src="checkeredmap.image.js"></script>
   <script type="text/javascript" src="teapot.js"></script>
   <script type="text/javascript">
 
@@ -16,6 +19,20 @@
       const canvasElement = document.getElementById('canvasElement');
       const context = canvasElement.getContext('2d');
       return context;
+    }
+
+    let textureMap = checkeredMapData;
+    document.getElementById('textureImage').onload = () => {
+      // let textureImage = document.getElementById('textureImage');
+      // let textureCanvas = document.createElement('canvas');
+      // textureCanvas.width = 1024;
+      // textureCanvas.height = 1024;
+      // let textureContext = textureCanvas.getContext('2d');
+
+      // // Create hidden canvas for our textureMap
+      // textureContext.drawImage(textureImage, 0, 0);
+      // textureMap = textureContext.getImageData(0,0,1024,1024);
+      // debugger;
     }
 
     let vertexNormals = [];
@@ -154,7 +171,7 @@
           const green = Math.floor((faceColor.y + 1) / 2 * 255);
           const blue = Math.floor((faceColor.z + 1) / 2 * 255);
           const finalColor = new Vector4(red, green, blue, 255);
-          canvas.calculateFragment({v1: uv1, v2: uv2, v3: uv3}, {w1: u1, w2: u2, w3: u3}, {v1, v2, v3}, {n1, n2, n3}, finalColor);
+          canvas.calculateFragment({v1:uv1, v2:uv2, v3:uv3}, {w1: u1, w2: u2, w3: u3}, {v1, v2, v3}, {n1, n2, n3}, finalColor);
         }
       }
 
@@ -201,24 +218,24 @@
       return translated;
     }
 
-    const perspectiveMatrix = makePerspective(0.25 * (Math.PI / 180), canvasWidth / canvasHeight, nearPlane, farPlane);
+    const perspectiveMatrix = makePerspective(0.1 * (Math.PI / 180), canvasWidth / canvasHeight, nearPlane, farPlane);
     function projectVertex(vertex) {
 
       // Multiply by our projection matrix to get screen coordinates.
       let projected = perspectiveMatrix.multiply(vertex);
       return projected;
     }
-    let projectionTest01 = projectVertex(new Vector4(0,0,0)).z;
-    let projectionTest0 = projectVertex(new Vector4(0,0,nearPlane)).z;
-    let projectionTest1 = projectVertex(new Vector4(0,0,1.5)).z;
-    let projectionTest342 = projectVertex(new Vector4(0,0,1.98)).z;
-    let projectionTest2 = projectVertex(new Vector4(0,0,farPlane * 0.1)).z;
-    let projectionTest3 = projectVertex(new Vector4(0,0,farPlane * 0.25)).z;
-    let projectionTest4 = projectVertex(new Vector4(0,0,farPlane * 0.5)).z;
-    let projectionTest5 = projectVertex(new Vector4(0,0,farPlane * 0.75)).z;
-    let projectionTest6 = projectVertex(new Vector4(0,0,farPlane * 0.99)).z;
-    let projectionTest7 = projectVertex(new Vector4(0,0,farPlane * 1)).z;
-    let projectionTest8 = projectVertex(new Vector4(0,0,farPlane * 1.25)).z;
+    // let projectionTest01 = projectVertex(new Vector4(0,0,0)).z;
+    // let projectionTest0 = projectVertex(new Vector4(0,0,nearPlane)).z;
+    // let projectionTest1 = projectVertex(new Vector4(0,0,1.5)).z;
+    // let projectionTest342 = projectVertex(new Vector4(0,0,1.98)).z;
+    // let projectionTest2 = projectVertex(new Vector4(0,0,farPlane * 0.1)).z;
+    // let projectionTest3 = projectVertex(new Vector4(0,0,farPlane * 0.25)).z;
+    // let projectionTest4 = projectVertex(new Vector4(0,0,farPlane * 0.5)).z;
+    // let projectionTest5 = projectVertex(new Vector4(0,0,farPlane * 0.75)).z;
+    // let projectionTest6 = projectVertex(new Vector4(0,0,farPlane * 0.99)).z;
+    // let projectionTest7 = projectVertex(new Vector4(0,0,farPlane * 1)).z;
+    // let projectionTest8 = projectVertex(new Vector4(0,0,farPlane * 1.25)).z;
     // debugger;
 
     function gameLoop() {

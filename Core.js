@@ -249,8 +249,6 @@ class Canvas {
     }
 
     const cameraLocation = projectVertex(new Vector4(0,0,0));
-    debugger;
-
     const area = edgeCheck(face.v1, face.v2, face.v3);
 
     for (let x = Math.round(topLeft.x); x <= bottomRight.x; x++) {
@@ -286,20 +284,38 @@ class Canvas {
               normals.n3.scale(barycentric.z)).scale(pixelCoord.z);
             interpolatedNormal.w = 0;
 
+            const zCorrectUvs = {
+              v1: new Vector4(uvs.v1.x / worldSpaceCoord.z, uvs.v1.y / worldSpaceCoord.z),
+              v2: new Vector4(uvs.v2.x / worldSpaceCoord.z, uvs.v2.y / worldSpaceCoord.z),
+              v3: new Vector4(uvs.v3.x / worldSpaceCoord.z, uvs.v3.y / worldSpaceCoord.z),
+            }
+
             const interpolatedUv =
-              uvs.v1.scale(barycentric.x).add(
-              uvs.v2.scale(barycentric.y).add(
-              uvs.v3.scale(barycentric.z))).scale(pixelCoord.z);
+              zCorrectUvs.v1.scale(barycentric.x).add(
+              zCorrectUvs.v2.scale(barycentric.y).add(
+              zCorrectUvs.v3.scale(barycentric.z))).scale(worldSpaceCoord.z);
             interpolatedUv.w = 0;
+            debugger;
 
             // Convert normal to rgb.
             // const red = Math.floor((interpolatedNormal.x + 1) / 2 * 255);
             // const green = Math.floor((interpolatedNormal.y + 1) / 2 * 255);
             // const blue = Math.floor((interpolatedNormal.z + 1) / 2 * 255);
 
-            const red = Math.floor(interpolatedUv.x * 255);
-            const green = Math.floor(interpolatedUv.y * 255);
-            const blue = Math.floor(interpolatedUv.z * 255);
+
+            let red = Math.floor(interpolatedUv.x * 255);
+            let green = Math.floor(interpolatedUv.y * 255);
+            let blue = Math.floor(interpolatedUv.z * 255);
+
+            if (textureMap) {
+              const texelX = (interpolatedUv.x) * textureMap.width;
+              const texelY = (1 - interpolatedUv.y) * textureMap.height;
+              const texelColor = textureMap.getPixel(texelX, texelY);
+              // debugger;
+              red = texelColor.r;
+              green = texelColor.g;
+              blue = texelColor.b;
+            }
 
             // Calculate shading.
             const diffuseTerm = 0.75;
@@ -326,7 +342,7 @@ class Canvas {
             const cameraAngle = Math.max(dot(eyeDirection, interpolatedNormal), 0);
             const illumination = calculatedAmbient +  calculatedSpecular;
 
-            const finalColor = new Vector4(red, green, 0, 255);
+            const finalColor = new Vector4(red, green, blue, 255);
             this.setPixel({x, y}, finalColor.scale(illumination), pixelCoord.z);
           }
         }
@@ -383,7 +399,25 @@ function pointInTriangle(point, triangle) {
 }
 
 class Texture {
-  constructor() {
+  constructor(w, h, data) {
+    this.width = w;
+    this.height = h;
+    this.data = data;
+  }
 
+  getPixel(x, y) {
+    const pixelX = Math.floor(x);
+    const pixelY = Math.floor(y);
+    const baseIndex = this.height * 4 * pixelX + pixelY * 4;
+    return {r: this.data[baseIndex], g: this.data[baseIndex + 1], b: this.data[baseIndex + 2], a: this.data[baseIndex + 3]};
+  }
+
+  setPixel(x, y, color) {
+    this.setPixel(x, y, color.r, color.g, color.b, color.a);
+  }
+
+  setPixel(x, y, red, green, blue, alpha) {
+    const baseIndex = this.height * 4 * x + y * 4;
+    return {r: baseIndex, g: baseIndex + 1, b: baseIndex + 2, a: baseIndex + 3};
   }
 }
