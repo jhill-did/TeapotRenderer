@@ -1,12 +1,12 @@
 <html style="text-align:center">
-  <canvas id="canvasElement" width=800 height=600 style="display:inline-block;border-style:solid;border-width:2px"/>
+  <canvas id="canvasElement" width=800 height=600 style="display:inline-block;border-style:solid;border-width:2px" onclick="toggleAffine()"/>
 
   <img id="textureImage" src="checkeredmap.jpg" alt="The Scream" width="1024" height="1024" style="display:none">
 
   <script type="text/javascript" src="Core.js"></script>
   <script type="text/javascript" src="ObjLoader.js"></script>
   <script type="text/javascript" src="Cube.obj.js"></script>
-  <script type="text/javascript" src="checkeredmap.image.js"></script>
+  <script type="text/javascript" src="brick.image.js"></script>
   <script type="text/javascript" src="teapot.js"></script>
   <script type="text/javascript">
 
@@ -15,25 +15,29 @@
 
     const vertexBuffer = [];
 
+    function toggleAffine() {
+      affineToggle = !affineToggle;
+    }
+
     function getCanvasContext() {
       const canvasElement = document.getElementById('canvasElement');
       const context = canvasElement.getContext('2d');
       return context;
     }
 
-    let textureMap = checkeredMapData;
-    document.getElementById('textureImage').onload = () => {
-      // let textureImage = document.getElementById('textureImage');
-      // let textureCanvas = document.createElement('canvas');
-      // textureCanvas.width = 1024;
-      // textureCanvas.height = 1024;
-      // let textureContext = textureCanvas.getContext('2d');
-
-      // // Create hidden canvas for our textureMap
-      // textureContext.drawImage(textureImage, 0, 0);
-      // textureMap = textureContext.getImageData(0,0,1024,1024);
-      // debugger;
-    }
+    let textureMap = brickData;
+    // document.getElementById('textureImage').onload = () => {
+    //   // let textureImage = document.getElementById('textureImage');
+    //   // let textureCanvas = document.createElement('canvas');
+    //   // textureCanvas.width = 1024;
+    //   // textureCanvas.height = 1024;
+    //   // let textureContext = textureCanvas.getContext('2d');
+//
+    //   // // Create hidden canvas for our textureMap
+    //   // textureContext.drawImage(textureImage, 0, 0);
+    //   // textureMap = textureContext.getImageData(0,0,1024,1024);
+    //   // debugger;
+    // }
 
     let vertexNormals = [];
     function init() {
@@ -79,8 +83,8 @@
     function render() {
       deltaTime = (Date.now() - previousTime) / 1000;
       previousTime = Date.now();
-      rotation += 0.5 * deltaTime;
-      // rotation = 180 * (Math.PI / 180);
+      rotation += 0.1 * deltaTime;
+      //rotation = 180 * (Math.PI / 180);
       lightLocation.x = Math.cos(Date.now() / 500) * 400;
       //lightLocation.z = Math.sin(Date.now() / 500) * 400 + 40;
       // lightLocation.x = -300;
@@ -194,9 +198,9 @@
       translationMatrix.m30 = 40;
 
       let scaleMatrix = new Matrix4();
-      scaleMatrix.m00 = 12;
-      scaleMatrix.m11 = 12;
-      scaleMatrix.m22 = 12;
+      scaleMatrix.m00 = 15;
+      scaleMatrix.m11 = 15;
+      scaleMatrix.m22 = 15;
       scaleMatrix.m33 = 1;
       let scaled = scaleMatrix.multiply(vertex);
 
@@ -213,7 +217,7 @@
       // Translate forward.
       const translated = rotated;
       translated.z += 40;
-      translated.y -= 0;
+      translated.y -= 10;
 
       return translated;
     }

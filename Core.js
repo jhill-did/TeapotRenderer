@@ -34,7 +34,7 @@ class Matrix4 {
         output.x = output.x / output.w;
         output.y = output.y / output.w;
         output.z = output.z / output.w;
-        output.w = 1;
+        //output.w = 1;
       }
 
       return output;
@@ -191,6 +191,7 @@ function makePerspective(fov, ratio, near, far) {
 }
 
 let lightLocation = new Vector4(-100, 100, -farPlane * 0.1);
+let affineToggle = false;
 class Canvas {
   constructor(context) {
     this.context = context;
@@ -236,10 +237,6 @@ class Canvas {
       y: Math.max(face.v1.y, face.v2.y, face.v3.y)
     };
 
-    const v1PixelDepth = new Vector4(0,0,0).distance(face.v1) / farPlane;
-    const v2PixelDepth = new Vector4(0,0,0).distance(face.v2) / farPlane;
-    const v3PixelDepth = new Vector4(0,0,0).distance(face.v3) / farPlane;
-
     const edgeCheck = (a, b, c) => {
       return (c.x - a.x) * (b.y - a.y) - (c.y - a.y) * (b.x - a.x);
     }
@@ -258,13 +255,14 @@ class Canvas {
         // First clip any points off screen.
         const onScreen = this.isPixelInScreenSpace(x, y);
 
+        const barycentric = new Vector4(
+          edgeCheck(face.v2, face.v3, pixelCoord) / area,
+          edgeCheck(face.v3, face.v1, pixelCoord) / area,
+          edgeCheck(face.v1, face.v2, pixelCoord) / area
+        )
+
         // Check if this point is on our triangle then shade the pixel if it is.
-        if (onScreen && pointInTriangle({x, y}, face)) {
-          const barycentric = new Vector4(
-            edgeCheck(face.v2, face.v3, pixelCoord) / area,
-            edgeCheck(face.v3, face.v1, pixelCoord) / area,
-            edgeCheck(face.v1, face.v2, pixelCoord) / area
-          )
+        if (onScreen && barycentric.x >= 0 && barycentric.y >= 0 && barycentric.z >= 0) {
 
           // Set our pixel's Z value to our interpolated depth.
           pixelCoord.z = 1 / (barycentric.x * (1 / face.v1.z) + barycentric.y * (1 / face.v2.z) + barycentric.z * (1 / face.v3.z));
@@ -284,32 +282,60 @@ class Canvas {
               normals.n3.scale(barycentric.z)).scale(pixelCoord.z);
             interpolatedNormal.w = 0;
 
-            const zCorrectUvs = {
-              v1: new Vector4(uvs.v1.x / worldSpaceCoord.z, uvs.v1.y / worldSpaceCoord.z),
-              v2: new Vector4(uvs.v2.x / worldSpaceCoord.z, uvs.v2.y / worldSpaceCoord.z),
-              v3: new Vector4(uvs.v3.x / worldSpaceCoord.z, uvs.v3.y / worldSpaceCoord.z),
+            // const zCorrectUvs = {
+            //   v1: new Vector4(uvs.v1.x / face.v1.z, uvs.v1.y / face.v1.z),
+            //   v2: new Vector4(uvs.v2.x / face.v2.z, uvs.v2.y / face.v2.z),
+            //   v3: new Vector4(uvs.v3.x / face.v3.z, uvs.v3.y / face.v3.z),
+            // }
+
+            //const interpolatedUv =
+            //  zCorrectUvs.v1.scale(barycentric.x).add(
+            //  zCorrectUvs.v2.scale(barycentric.y).add(
+            //  zCorrectUvs.v3.scale(barycentric.z))).scale(pixelCoord.z);
+            //interpolatedUv.w = 0;
+            //debugger;
+            let u = 0;
+            let v = 0;
+
+            if (affineToggle === true) {
+              u = barycentric.x * uvs.v1.x + barycentric.y * uvs.v2.x + barycentric.z * uvs.v3.x;
+              v = barycentric.x * uvs.v1.y + barycentric.y * uvs.v2.y + barycentric.z * uvs.v3.y;
+            }
+            else {
+              const zDividedUvs = {
+                v1: {
+                  u: uvs.v1.x / face.v1.w,
+                  v: uvs.v1.y / face.v1.w
+                },
+                v2: {
+                  u: uvs.v2.x / face.v2.w,
+                  v: uvs.v2.y / face.v2.w
+                },
+                v3: {
+                  u: uvs.v3.x / face.v3.w,
+                  v: uvs.v3.y / face.v3.w
+                }
+              };
+
+              const w = barycentric.x * (1 / face.v1.w) + barycentric.y * (1 / face.v2.w) + barycentric.z * (1 / face.v3.w);
+              u = (barycentric.x * zDividedUvs.v1.u + barycentric.y * zDividedUvs.v2.u + barycentric.z * zDividedUvs.v3.u);
+              v = (barycentric.x * zDividedUvs.v1.v + barycentric.y * zDividedUvs.v2.v + barycentric.z * zDividedUvs.v3.v);
+              u = (u / w);
+              v = (v / w);
             }
 
-            const interpolatedUv =
-              zCorrectUvs.v1.scale(barycentric.x).add(
-              zCorrectUvs.v2.scale(barycentric.y).add(
-              zCorrectUvs.v3.scale(barycentric.z))).scale(worldSpaceCoord.z);
-            interpolatedUv.w = 0;
-            debugger;
-
             // Convert normal to rgb.
-            // const red = Math.floor((interpolatedNormal.x + 1) / 2 * 255);
-            // const green = Math.floor((interpolatedNormal.y + 1) / 2 * 255);
-            // const blue = Math.floor((interpolatedNormal.z + 1) / 2 * 255);
+            //const red = Math.floor((interpolatedNormal.x + 1) / 2 * 255);
+            //const green = Math.floor((interpolatedNormal.y + 1) / 2 * 255);
+            //const blue = Math.floor((interpolatedNormal.z + 1) / 2 * 255);
 
-
-            let red = Math.floor(interpolatedUv.x * 255);
-            let green = Math.floor(interpolatedUv.y * 255);
-            let blue = Math.floor(interpolatedUv.z * 255);
+            let red = Math.floor(u * 255);
+            let green = Math.floor(v * 255);
+            let blue = Math.floor(0 * 255);
 
             if (textureMap) {
-              const texelX = (interpolatedUv.x) * textureMap.width;
-              const texelY = (1 - interpolatedUv.y) * textureMap.height;
+              const texelX = (1 - u) * textureMap.width;
+              const texelY = (1 - v) * textureMap.height;
               const texelColor = textureMap.getPixel(texelX, texelY);
               // debugger;
               red = texelColor.r;
@@ -343,7 +369,7 @@ class Canvas {
             const illumination = calculatedAmbient +  calculatedSpecular;
 
             const finalColor = new Vector4(red, green, blue, 255);
-            this.setPixel({x, y}, finalColor.scale(illumination), pixelCoord.z);
+            this.setPixel({x, y}, finalColor.scale(1), pixelCoord.z);
           }
         }
       }
@@ -365,39 +391,6 @@ function clamp(input, min, max) {
   return Math.min(Math.max(input, min), max);
 }
 
-function pointInTriangle(point, triangle) {
-  const edgeCheck = (a, b, c) => {
-    return (c.x - a.x) * (b.y - a.y) - (c.y - a.y) * (b.x - a.x);
-  }
-
-  // offset to sample pixel center.
-  point = {
-    x: point.x + 0.5,
-    y: point.y + 0.5
-  };
-
-  const w1 = edgeCheck(triangle.v2, triangle.v3, point);
-  const w2 = edgeCheck(triangle.v3, triangle.v1, point);
-  const w3 = edgeCheck(triangle.v1, triangle.v2, point);
-
-  // const edge1 = triangle.v3.subtract(triangle.v2);
-  // const edge2 = triangle.v1.subtract(triangle.v3);
-  // const edge3 = triangle.v2.subtract(triangle.v1);
-
-  // const edge1 = triangle.v3.add(triangle.v2);
-  // const edge2 = triangle.v1.add(triangle.v3);
-  // const edge3 = triangle.v2.add(triangle.v1);
-
-
-  // let overlaps = true;
-  // overlaps &= (w1 === 0 ? (edge1.y === 0 && edge1.x > 0) || edge1.y > 0 : w1 > 0);
-  // overlaps &= (w2 === 0 ? (edge2.y === 0 && edge2.x > 0) || edge2.y > 0 : w2 > 0);
-  // overlaps &= (w2 === 0 ? (edge3.y === 0 && edge3.x > 0) || edge3.y > 0 : w3 > 0);
-
-  return w1 <= 0 && w2 <= 0 && w3 <= 0; // b2 && b2 === b3;
-  return Boolean(overlaps);
-}
-
 class Texture {
   constructor(w, h, data) {
     this.width = w;
@@ -408,7 +401,7 @@ class Texture {
   getPixel(x, y) {
     const pixelX = Math.floor(x);
     const pixelY = Math.floor(y);
-    const baseIndex = this.height * 4 * pixelX + pixelY * 4;
+    const baseIndex = this.height * 4 * pixelY + pixelX * 4;
     return {r: this.data[baseIndex], g: this.data[baseIndex + 1], b: this.data[baseIndex + 2], a: this.data[baseIndex + 3]};
   }
 
