@@ -163,22 +163,6 @@ const nearPlane = 1;
 const farPlane = 100;
 function makePerspective(fov, ratio, near, far) {
   const output = new Matrix4();
-  // const halfTan = Math.tan(fov / 2);
-  // output.m00 = 1 / (ratio * halfTan);
-  // output.m11 = 1 / (ratio * halfTan);
-  // output.m22 = -far / (far - near);
-  // output.m22 = (far + near) / (far - near) + 1
-  // output.m32 = -1;
-  // output.m23 = -(far * near) / (far - near);
-
-  // const oneOverDepth = 1 / (far - near);
-  // const halfTan = 1 / Math.tan(fov / 2);
-  // output.m00 = halfTan / ratio;
-  // output.m11 = halfTan / ratio;
-  // output.m22 = -far * oneOverDepth;
-  // output.m22 = -(far + near) / (far - near);
-  // output.m23 = -(2 * far * near) / (far - near);
-  // output.m32 = -1;
 
   const halfTan = 1 / Math.tan(fov / 2);
   output.m00 = halfTan / ratio;
@@ -254,6 +238,9 @@ class Canvas {
 
         // First clip any points off screen.
         const onScreen = this.isPixelInScreenSpace(x, y);
+        if (onScreen === false) {
+          continue;
+        }
 
         const barycentric = new Vector4(
           edgeCheck(face.v2, face.v3, pixelCoord) / area,
@@ -262,19 +249,19 @@ class Canvas {
         )
 
         // Check if this point is on our triangle then shade the pixel if it is.
-        if (onScreen && barycentric.x >= 0 && barycentric.y >= 0 && barycentric.z >= 0) {
+        if (barycentric.x >= 0 && barycentric.y >= 0 && barycentric.z >= 0) {
 
           // Set our pixel's Z value to our interpolated depth.
           pixelCoord.z = 1 / (barycentric.x * (1 / face.v1.z) + barycentric.y * (1 / face.v2.z) + barycentric.z * (1 / face.v3.z));
 
-          const worldSpaceCoord =
-            worldSpace.w1.scale(barycentric.x).add(
-            worldSpace.w2.scale(barycentric.y).add(
-            worldSpace.w3.scale(barycentric.z)));
-          worldSpaceCoord.w = 0;
-
           let currentDepth = this.getDepth({x, y});
           if (pixelCoord.z >= -1 && pixelCoord.z <= 1 && pixelCoord.z < currentDepth) {
+            const worldSpaceCoord =
+              worldSpace.w1.scale(barycentric.x).add(
+              worldSpace.w2.scale(barycentric.y).add(
+              worldSpace.w3.scale(barycentric.z)));
+            worldSpaceCoord.w = 0;
+
             // Always scale interpolated values by z coordinate to fix perspective issues.
             const interpolatedNormal =
               normals.n1.scale(barycentric.x).add(
@@ -282,18 +269,6 @@ class Canvas {
               normals.n3.scale(barycentric.z)).scale(pixelCoord.z);
             interpolatedNormal.w = 0;
 
-            // const zCorrectUvs = {
-            //   v1: new Vector4(uvs.v1.x / face.v1.z, uvs.v1.y / face.v1.z),
-            //   v2: new Vector4(uvs.v2.x / face.v2.z, uvs.v2.y / face.v2.z),
-            //   v3: new Vector4(uvs.v3.x / face.v3.z, uvs.v3.y / face.v3.z),
-            // }
-
-            //const interpolatedUv =
-            //  zCorrectUvs.v1.scale(barycentric.x).add(
-            //  zCorrectUvs.v2.scale(barycentric.y).add(
-            //  zCorrectUvs.v3.scale(barycentric.z))).scale(pixelCoord.z);
-            //interpolatedUv.w = 0;
-            //debugger;
             let u = 0;
             let v = 0;
 
@@ -318,16 +293,14 @@ class Canvas {
               };
 
               const w = barycentric.x * (1 / face.v1.w) + barycentric.y * (1 / face.v2.w) + barycentric.z * (1 / face.v3.w);
-              u = (barycentric.x * zDividedUvs.v1.u + barycentric.y * zDividedUvs.v2.u + barycentric.z * zDividedUvs.v3.u);
-              v = (barycentric.x * zDividedUvs.v1.v + barycentric.y * zDividedUvs.v2.v + barycentric.z * zDividedUvs.v3.v);
-              u = (u / w);
-              v = (v / w);
+              u = (barycentric.x * zDividedUvs.v1.u + barycentric.y * zDividedUvs.v2.u + barycentric.z * zDividedUvs.v3.u) / w;
+              v = (barycentric.x * zDividedUvs.v1.v + barycentric.y * zDividedUvs.v2.v + barycentric.z * zDividedUvs.v3.v) / w;
             }
 
             // Convert normal to rgb.
-            //const red = Math.floor((interpolatedNormal.x + 1) / 2 * 255);
-            //const green = Math.floor((interpolatedNormal.y + 1) / 2 * 255);
-            //const blue = Math.floor((interpolatedNormal.z + 1) / 2 * 255);
+            // const red = Math.floor((interpolatedNormal.x + 1) / 2 * 255);
+            // const green = Math.floor((interpolatedNormal.y + 1) / 2 * 255);
+            // const blue = Math.floor((interpolatedNormal.z + 1) / 2 * 255);
 
             let red = Math.floor(u * 255);
             let green = Math.floor(v * 255);
