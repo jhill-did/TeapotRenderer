@@ -5,9 +5,9 @@
 
   <script type="text/javascript" src="Core.js"></script>
   <script type="text/javascript" src="ObjLoader.js"></script>
-  <script type="text/javascript" src="Cube.obj.js"></script>
-  <script type="text/javascript" src="brick.image.js"></script>
-  <script type="text/javascript" src="teapot.js"></script>
+  <script type="text/javascript" src="assets/cock.obj.js"></script>
+  <script type="text/javascript" src="assets/cockDiffuse.image.js"></script>
+  <script type="text/javascript" src="assets/cockNormal.image.js"></script>
   <script type="text/javascript">
 
     const canvasHeight = 600;
@@ -25,7 +25,8 @@
       return context;
     }
 
-    let textureMap = brickData;
+    let diffuseMap = cockDiffuse;
+    let normalMap = cockNormal;
 
     let vertexNormals = [];
     function init() {
@@ -33,7 +34,7 @@
       context.translate(canvasWidth / 2, canvasHeight / 2);
 
       // Load model into vertexBuffer.
-      const sphereGeo = loadObj(cubeData);
+      const sphereGeo = loadObj(cockData);
       teapotVerts = sphereGeo.vertices;
       vertexNormals = sphereGeo.normals;
       teapotFaces = sphereGeo.triangles;
@@ -67,14 +68,15 @@
       // }
     }
 
-    let rotation = 0 * (Math.PI / 180);
+    let rotation = 140 * (Math.PI / 180);
     function render() {
       deltaTime = (Date.now() - previousTime) / 1000;
       previousTime = Date.now();
-      rotation += 0.2 * deltaTime;
-      //rotation = 180 * (Math.PI / 180);
-      lightLocation.x = Math.cos(Date.now() / 500) * 400;
-      //lightLocation.z = Math.sin(Date.now() / 500) * 400 + 40;
+      rotation += 0.1 * deltaTime;
+      //rotation = 140 * (Math.PI / 180);
+      lightLocation.z = 40;
+      lightLocation.x = Math.cos(Date.now() / 400) * 10;
+      lightLocation.z += Math.sin(Date.now() / 400) * 10;
       // lightLocation.x = -300;
 
       context = getCanvasContext();
@@ -83,24 +85,24 @@
       const canvas = new Canvas(context);
 
       for (const triangle of teapotFaces) {
-        let w1 = teapotVerts[triangle.vertices.v1];
-        let w2 = teapotVerts[triangle.vertices.v2];
-        let w3 = teapotVerts[triangle.vertices.v3];
-        let u1 = transformVertex(w1)
-        let u2 = transformVertex(w2)
-        let u3 = transformVertex(w3)
-        let v1 = projectVertex(u1);
-        let v2 = projectVertex(u2);
-        let v3 = projectVertex(u3);
+        let localspace1 = teapotVerts[triangle.vertices.v1];
+        let localspace2 = teapotVerts[triangle.vertices.v2];
+        let localspace3 = teapotVerts[triangle.vertices.v3];
+        let worldspace1 = transformVertex(localspace1)
+        let worldspace2 = transformVertex(localspace2)
+        let worldspace3 = transformVertex(localspace3)
+        let v1 = projectVertex(worldspace1);
+        let v2 = projectVertex(worldspace2);
+        let v3 = projectVertex(worldspace3);
 
         let uv1 = teapotUvs[triangle.uvs.v1];
         let uv2 = teapotUvs[triangle.uvs.v2];
         let uv3 = teapotUvs[triangle.uvs.v3];
 
-        let generatedNormal = u2.subtract(u1).crossProduct(u3.subtract(u1)).normalized();
+        let generatedNormal = worldspace2.subtract(worldspace1).crossProduct(worldspace3.subtract(worldspace1)).normalized();
 
         // Backface culling.
-        if (u1.scale(-1).dotProduct(generatedNormal) >= 0) { // If this face is pointed to our camera, draw it.
+        if (worldspace1.scale(-1).dotProduct(generatedNormal) >= 0) { // If this face is pointed to our camera, draw it.
           const rotateNormal  = (normal) => {
             const rotationMatrix = new Matrix4();
             rotationMatrix.m00 = Math.cos(rotation);
@@ -114,12 +116,31 @@
           let n2 = rotateNormal(vertexNormals[triangle.normals.v2]);
           let n3 = rotateNormal(vertexNormals[triangle.normals.v3]);
 
-          let faceColor = u2.subtract(u1).crossProduct(u3.subtract(u1)).normalized();
+          // Generate Tangent, Bitangent, Normal (TBN) Matrix for converting normals to object space.
+          const faceNormal = worldspace2.subtract(worldspace1).crossProduct(worldspace3.subtract(worldspace1)).normalized();
+
+          const edge1 = worldspace2.subtract(worldspace1);
+          const edge2 = worldspace3.subtract(worldspace1);
+
+          const deltaUv1 = uv2.subtract(uv1);
+          const deltaUv2 = uv3.subtract(uv1);
+
+          const r = 1 / (deltaUv1.x * deltaUv2.y - deltaUv1.y * deltaUv2.x);
+          let faceTangent = edge1.scale(deltaUv2.y).subtract(edge2.scale(deltaUv1.y)).scale(r).normalized();
+          let faceBitangent = edge2.scale(deltaUv1.x).subtract(edge1.scale(deltaUv2.x)).scale(r).normalized();
+
+          //faceTangent = faceBitangent.crossProduct(faceNormal);
+          //faceBitangent = faceTangent.crossProduct(faceNormal);
+//
+          const tbn = new Matrix4(faceTangent, faceBitangent, faceNormal);
+          debugger;
+
+          let faceColor = worldspace2.subtract(worldspace1).crossProduct(worldspace3.subtract(worldspace1)).normalized();
           const red = Math.floor((faceColor.x + 1) / 2 * 255);
           const green = Math.floor((faceColor.y + 1) / 2 * 255);
           const blue = Math.floor((faceColor.z + 1) / 2 * 255);
           const finalColor = new Vector4(red, green, blue, 255);
-          canvas.calculateFragment({v1:uv1, v2:uv2, v3:uv3}, {w1: u1, w2: u2, w3: u3}, {v1, v2, v3}, {n1, n2, n3}, finalColor);
+          canvas.calculateFragment(tbn, {v1:uv1, v2:uv2, v3:uv3}, {w1: worldspace1, w2: worldspace2, w3: worldspace3}, {v1, v2, v3}, {n1, n2, n3}, finalColor);
         }
       }
 
@@ -180,7 +201,7 @@
       return translated;
     }
 
-    const perspectiveMatrix = makePerspective(0.25 * (Math.PI / 180), canvasWidth / canvasHeight, nearPlane, farPlane);
+    const perspectiveMatrix = makePerspective(0.05 * (Math.PI / 180), canvasWidth / canvasHeight, nearPlane, farPlane);
     function projectVertex(vertex) {
 
       // Multiply by our projection matrix to get screen coordinates.
@@ -192,6 +213,30 @@
       window.requestAnimationFrame(gameLoop);
       render();
     }
+
+    //const test = new Matrix4();
+    //test.m00 = 0;
+    //test.m01 = 1;
+    //test.m02 = 2;
+    //test.m03 = 3;
+//
+    //test.m10 = 10;
+    //test.m11 = 11;
+    //test.m12 = 12;
+    //test.m13 = 13;
+//
+    //test.m20 = 20;
+    //test.m21 = 21;
+    //test.m22 = 22;
+    //test.m23 = 23;
+//
+    //test.m30 = 30;
+    //test.m31 = 31;
+    //test.m32 = 32;
+    //test.m33 = 33;
+//
+    //const output = test.transpose();
+    //debugger;
 
     const frameLimit = 30;
     let deltaTime = 1000 / frameLimit;

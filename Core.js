@@ -1,6 +1,6 @@
 
 class Matrix4 {
-  constructor() {
+  constructor(vec1, vec2, vec3) {
     this.m00 = 0;
     this.m01 = 0;
     this.m02 = 0;
@@ -20,6 +20,28 @@ class Matrix4 {
     this.m31 = 0
     this.m32 = 0;
     this.m33 = 0;
+
+    if (vec1 && vec2 && vec3) {
+      this.m00 = vec1.x;
+      this.m10 = vec1.y;
+      this.m20 = vec1.z;
+      this.m30 = 0;
+
+      this.m01 = vec2.x;
+      this.m11 = vec2.y;
+      this.m21 = vec2.z;
+      this.m31 = 0;
+
+      this.m02 = vec3.x;
+      this.m12 = vec3.y;
+      this.m22 = vec3.z;
+      this.m32 = 0;
+
+      this.m03 = 0;
+      this.m13 = 0;
+      this.m23 = 0;
+      this.m33 = 1;
+    }
   }
 
   multiply(vec) {
@@ -42,6 +64,31 @@ class Matrix4 {
     else {
       console.error('Invalid multiplication target');
     }
+  }
+
+  transpose() {
+    let output = new Matrix4();
+    output.m00 = this.m00;
+    output.m01 = this.m10;
+    output.m02 = this.m20;
+    output.m03 = this.m30;
+
+    output.m10 = this.m01;
+    output.m11 = this.m11;
+    output.m12 = this.m21;
+    output.m13 = this.m31;
+
+    output.m20 = this.m02;
+    output.m21 = this.m12;
+    output.m22 = this.m22;
+    output.m23 = this.m32;
+
+    output.m30 = this.m03;
+    output.m31 = this.m13;
+    output.m32 = this.m23;
+    output.m33 = this.m33;
+
+    return output;
   }
 }
 
@@ -174,7 +221,7 @@ function makePerspective(fov, ratio, near, far) {
   return output;
 }
 
-let lightLocation = new Vector4(-100, 100, -farPlane * 0.1);
+let lightLocation = new Vector4(0, 1, farPlane * 0.25);
 let affineToggle = false;
 class Canvas {
   constructor(context) {
@@ -210,7 +257,7 @@ class Canvas {
     return this.zBuffer[index];
   }
 
-  calculateFragment(uvs, worldSpace, face, normals, color) {
+  calculateFragment(tbnMatrix, uvs, worldSpace, face, normals, color) {
     let topLeft = {
       x: Math.min(face.v1.x, face.v2.x, face.v3.x),
       y: Math.min(face.v1.y, face.v2.y, face.v3.y)
@@ -263,11 +310,16 @@ class Canvas {
             worldSpaceCoord.w = 0;
 
             // Always scale interpolated values by z coordinate to fix perspective issues.
-            const interpolatedNormal =
+            let interpolatedNormal =
               normals.n1.scale(barycentric.x).add(
               normals.n2.scale(barycentric.y)).add(
               normals.n3.scale(barycentric.z)).scale(pixelCoord.z);
             interpolatedNormal.w = 0;
+
+            const interpolatedVertexNormal = new Vector4(interpolatedNormal.x, interpolatedNormal.y, interpolatedNormal.z, 0);
+            tbnMatrix.m02 = interpolatedVertexNormal.x;
+            tbnMatrix.m12 = interpolatedVertexNormal.y;
+            tbnMatrix.m22 = interpolatedVertexNormal.z
 
             let u = 0;
             let v = 0;
@@ -305,22 +357,36 @@ class Canvas {
             let red = Math.floor(u * 255);
             let green = Math.floor(v * 255);
             let blue = Math.floor(0 * 255);
+            let alpha = 255;
 
-            if (textureMap) {
-              const texelX = (1 - u) * textureMap.width;
-              const texelY = (1 - v) * textureMap.height;
-              const texelColor = textureMap.getPixel(texelX, texelY);
+            if (diffuseMap) {
+              const texelX = (u) * diffuseMap.width;
+              const texelY = (1 - v) * diffuseMap.height;
+              const texelColor = diffuseMap.getPixel(texelX, texelY);
               // debugger;
               red = texelColor.r;
               green = texelColor.g;
               blue = texelColor.b;
+              alpha = texelColor.a
+            }
+
+            if (normalMap) {
+              const texelX = (u) * normalMap.width;
+              const texelY = (1 - v) * normalMap.height;
+              const texelColor = normalMap.getPixel(texelX, texelY);
+              interpolatedNormal.x = texelColor.r / 255 * 2.0 - 1.0;
+              interpolatedNormal.y = texelColor.g / 255 * 2.0 - 1.0;
+              interpolatedNormal.z = texelColor.b / 255 * 2.0 - 1.0;
+              // Convert from tangent space to object space using
+              // Matrix(tangent, bitangent, face normal)
+              interpolatedNormal = tbnMatrix.multiply(interpolatedNormal)
             }
 
             // Calculate shading.
-            const diffuseTerm = 0.75;
-            const specularTerm = 2;
+            const diffuseTerm = 0.5;
+            const specularTerm = 1.0;
             const shininessTerm = 5;
-            const ambientTerm = 0.75;
+            const ambientTerm = 0.45;
             const ambientColor = new Vector4(255,255,255,255);
             let lightDirection = lightLocation.subtract(worldSpaceCoord).normalized();
             let flippedLightDirection = lightDirection.negated();
@@ -330,7 +396,7 @@ class Canvas {
             pixelCoord.w = 0;
 
             const reflectedLightDirection = flippedLightDirection.subtract(interpolatedNormal.scale(2).scale(dot(flippedLightDirection, interpolatedNormal))).normalized();
-            let eyeDirection = cameraLocation.subtract(worldSpaceCoord).normalized();
+            let eyeDirection = cameraLocation.subtract(worldSpaceCoord).normalized().negated();
             reflectedLightDirection.w = 0;
             eyeDirection.w = 0;
 
@@ -339,10 +405,12 @@ class Canvas {
             const calculatedAmbient = ambientTerm + lightNormDot * diffuseTerm;
             const calculatedSpecular = specularTerm * Math.pow(reflectionEyeDot, shininessTerm);
             const cameraAngle = Math.max(dot(eyeDirection, interpolatedNormal), 0);
-            const illumination = calculatedAmbient +  calculatedSpecular;
+            const illumination = Math.max(0, calculatedAmbient +  calculatedSpecular);
 
-            const finalColor = new Vector4(red, green, blue, 255);
-            this.setPixel({x, y}, finalColor.scale(1), pixelCoord.z);
+            //const diffuseColor = new Vector4((interpolatedNormal.x + 1.0) / 2.0 * 255, (interpolatedNormal.y + 1.0) / 2.0  * 255, (interpolatedNormal.z + 1.0) / 2.0  * 255, 255);
+            const diffuseColor = new Vector4(red, green, blue, 255);
+            const finalColor = diffuseColor.scale(illumination);
+            this.setPixel({x, y}, finalColor, pixelCoord.z);
           }
         }
       }
@@ -387,3 +455,11 @@ class Texture {
     return {r: baseIndex, g: baseIndex + 1, b: baseIndex + 2, a: baseIndex + 3};
   }
 }
+
+
+
+/*
+Floppy disk by drumdorf is licensed under CC Attribution-ShareAlike
+2017 Year of the Rooster by The Ice Wolves is licensed under CC Attribution
+Small Box Truck by Renafox is licensed under CC Attribution-NonCommercial
+*/
