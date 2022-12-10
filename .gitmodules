@@ -1,0 +1,3 @@
+[submodule "src/maths"]
+	path = src/maths
+	url = https://github.com/puddin482/maths.git

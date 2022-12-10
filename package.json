@@ -1,0 +1,24 @@
+{
+  "name": "TeapotRenderer",
+  "version": "1.0.0",
+  "description": "Baby's first software renderer (Expect poor performance).",
+  "main": "Core.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/puddin482/TeapotRenderer.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/puddin482/TeapotRenderer/issues"
+  },
+  "homepage": "https://github.com/puddin482/TeapotRenderer#readme",
+  "devDependencies": {
+    "parcel": "^2.8.0",
+    "typescript": "^4.9.4"
+  }
+}

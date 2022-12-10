@@ -1,0 +1,5 @@
+.parcel-cache
+.tags
+.tags_swap
+dist
+node_modules
