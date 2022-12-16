@@ -1,6 +1,6 @@
-import { loadImageTexture } from './image';
+import { Texture } from './texture';
 import { Matrix4, Canvas } from './core';
-import { loadObj, Model } from './model-obj';
+import { loadModel, Model } from './model';
 import { subtract as subtract2 } from './maths/vec2';
 import {
   Vec4,
@@ -11,6 +11,12 @@ import {
   normalized,
   dot,
 } from './maths/vec4';
+
+/*
+Floppy disk by drumdorf is licensed under CC Attribution-ShareAlike
+2017 Year of the Rooster by The Ice Wolves is licensed under CC Attribution
+Small Box Truck by Renafox is licensed under CC Attribution-NonCommercial
+*/
 
 const canvasHeight = 600;
 const canvasWidth = 800;
@@ -31,10 +37,10 @@ function makePerspective(fov: number, ratio: number, near: number, far: number) 
   output.m32 = 1;
 
   return output;
-}
+};
 
 const perspectiveMatrix = makePerspective(
-  0.25 * (Math.PI / 180),
+  0.2 * (Math.PI / 180),
   canvasWidth / canvasHeight,
   nearPlane,
   farPlane
@@ -96,16 +102,37 @@ function transformVertex(vertex: Vec4): Vec4 {
   return translated;
 }
 
-const text = (promise: Promise<Response>) => promise.then(resp => resp.text());
+const splatTexture = (texture: Texture) => {
+  const { width, height, data } = texture;
+
+  const root = document.getElementById('splat-root') as HTMLDivElement;
+  const canvas = document.createElement('canvas') as HTMLCanvasElement;
+  canvas.width = width;
+  canvas.height = height;
+
+  const context = canvas.getContext('2d');
+  for (let row = 0; row < height; row += 1) {
+    for (let column = 0; column < width; column += 1) {
+      const offset = (row * width + column) * 4;
+      const red = data[offset + 0];
+      const green = data[offset + 1];
+      const blue = data[offset + 2];
+      const alpha = data[offset + 3];
+      context.fillStyle = `rgba(${red}, ${green}, ${blue}, ${alpha / 255})`;
+      context.fillRect(column, row, 1, 1);
+    }
+  }
+
+  root.appendChild(canvas);
+};
 
 async function init(): Promise<Model> {
   context = getCanvasContext();
   context.translate(canvasWidth / 2, canvasHeight / 2);
 
-  const cockData = await text(fetch('cube.obj'));
-  const diffuseMap = await loadImageTexture('brick.image');
+  const model = loadModel('/floppy-disk/floppy-disk.json');
 
-  return { ...loadObj(cockData), diffuseMap } as Model;
+  return model;
 
   // Calculate vertex normals.
   // for (let index = 0; index < teapotVerts.length; index++) {
@@ -243,15 +270,14 @@ function render(model: Model) {
         finalColor,
         lightLocation,
         perspectiveMatrix,
-        model.diffuseMap,
-        model.normalMap,
+        model.textures[0],
       );
     }
   }
 
   canvas.submitImageData();
 
-  context.fillStyle = '#444444';
+  context.fillStyle = '#eee';
   context.fillText(`Frame Time: ${deltaTime} (FPS: ${Math.round(1 / deltaTime)})`, (canvasWidth / -2) + 15, (canvasHeight / -2) + 20);
   context.fillText(`Triangles: ${triangles.length}`, (canvasWidth / -2) + 15, (canvasHeight / -2) + 40);
   context.fillText(`Vertices: ${vertices.length}`, (canvasWidth / -2) + 15, (canvasHeight / -2) + 60);

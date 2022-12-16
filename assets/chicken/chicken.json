@@ -1,0 +1,4 @@
+{
+  "modelPath": "./chicken.obj",
+  "texturePaths": ["./chicken-color.png"]
+}

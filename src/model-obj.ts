@@ -1,29 +1,6 @@
-import { Texture } from './core';
 import { Vec2, vec2 } from './maths/vec2';
 import { Vec4, vec4 } from './maths/vec4';
-
-type VertexIndices = {
-  v1: number;
-  v2: number;
-  v3: number;
-};
-
-export type Triangle = {
-  vertices: VertexIndices,
-  uvs: VertexIndices,
-  normals: VertexIndices,
-};
-
-// TODO(Jordan): This model format kinda sucks ass.
-export type Model = {
-  vertices: Vec4[];
-  uvs: Vec2[];
-  normals: Vec4[];
-  triangles: Triangle[];
-
-  diffuseMap: Texture;
-  normalMap: Texture;
-};
+import { Model, Triangle } from './model';
 
 export function loadObj(objFileData: string): Model {
   const output: Model = {
@@ -31,8 +8,7 @@ export function loadObj(objFileData: string): Model {
     uvs: [],
     normals: [],
     triangles: [],
-    diffuseMap: null,
-    normalMap: null,
+    textures: [],
   };
 
   const lines = objFileData.split('\n');

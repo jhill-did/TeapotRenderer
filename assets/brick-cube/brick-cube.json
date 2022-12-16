@@ -1,0 +1,4 @@
+{
+  "modelPath": "./cube.obj",
+  "texturePaths": ["./brick.png"]
+}

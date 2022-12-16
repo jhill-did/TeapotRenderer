@@ -1,4 +1,4 @@
-import { Texture, sample } from './image';
+import { Texture, sample } from './texture';
 import { Vec2, vec2 } from './maths/vec2';
 import {
   Vec4,
@@ -121,6 +121,14 @@ export class Matrix4 {
   }
 }
 
+/*
+export const drawTriangle = (
+  canvas: Canvas,
+) => {
+
+};
+*/
+
 export class Canvas {
   context: CanvasRenderingContext2D;
   canvasWidth: number;
@@ -138,11 +146,13 @@ export class Canvas {
     this.pixels = this.imageData.data;
 
     const depthBufferSize = this.pixels.length / 4;
-    this.zBuffer = new Array(depthBufferSize);
+    this.zBuffer = new Array(depthBufferSize).fill(1);
+    /*
     let index = 0;
     while (index < depthBufferSize) {
       this.zBuffer[index++] = 1; // Set default values of depthBuffer to far plane.
     }
+    */
   }
 
   setPixel(vector: Vec2, color: Vec4, depth: number) {
@@ -184,16 +194,15 @@ export class Canvas {
     lightLocation: Vec4,
     perspectiveMatrix: Matrix4,
     diffuseMap: Texture,
-    normalMap: Texture,
   ) {
-    let topLeft = [
+    const topLeft = [
       Math.min(face.v1[0], face.v2[0], face.v3[0]),
-      Math.min(face.v1[1], face.v2[1], face.v3[1])
+      Math.min(face.v1[1], face.v2[1], face.v3[1]),
     ];
 
-    let bottomRight = [
+    const bottomRight = [
       Math.max(face.v1[0], face.v2[0], face.v3[0]),
-      Math.max(face.v1[1], face.v2[1], face.v3[1])
+      Math.max(face.v1[1], face.v2[1], face.v3[1]),
     ];
 
     const edgeCheck = (a, b, c) => {
@@ -203,6 +212,7 @@ export class Canvas {
     const cameraLocation = perspectiveMatrix.multiply(vec4(0, 0, 0, 1));
     const area = edgeCheck(face.v1, face.v2, face.v3);
 
+    // Rasterize triangle within bounding box.
     for (let x = Math.round(topLeft[0]); x <= bottomRight[0]; x++) {
       for (let y = Math.round(topLeft[1]); y <= bottomRight[1]; y++) {
         const pixelCoord = vec4(x + 0.5, y + 0.5, 0, 1);
@@ -252,11 +262,11 @@ export class Canvas {
 
             interpolatedNormal[3] = 0;
 
-            let interpolatedVertexNormal = vec4(
+            const interpolatedVertexNormal = vec4(
               interpolatedNormal[0],
               interpolatedNormal[1],
               interpolatedNormal[2],
-              0
+              0,
             );
 
             tbnMatrix.m02 = interpolatedVertexNormal[0];
@@ -269,8 +279,7 @@ export class Canvas {
             if (affineToggle === true) {
               u = barycentric[0] * uvs.v1[0] + barycentric[1] * uvs.v2[0] + barycentric[2] * uvs.v3[0];
               v = barycentric[0] * uvs.v1[1] + barycentric[1] * uvs.v2[1] + barycentric[2] * uvs.v3[1];
-            }
-            else {
+            } else {
               const zDividedUvs = {
                 v1: {
                   u: uvs.v1[0] / face.v1[3],
@@ -304,6 +313,7 @@ export class Canvas {
               ([red, green, blue, alpha] = texelColor);
             }
 
+            /*
             if (normalMap) {
               const texelX = (u) * normalMap.width;
               const texelY = (1 - v) * normalMap.height;
@@ -315,6 +325,7 @@ export class Canvas {
               // Matrix(tangent, bitangent, face normal)
               interpolatedNormal = tbnMatrix.multiply(interpolatedNormal)
             }
+            */
 
             /*
             // Calculate shading.
@@ -359,7 +370,7 @@ export class Canvas {
     }
   }
 
-  isPixelInScreenSpace(x, y) {
+  isPixelInScreenSpace(x: number, y: number) {
     const halfWidth = this.canvasWidth / 2;
     const halfHeight = this.canvasHeight / 2;
     return (x > -halfWidth && y > -halfHeight && x < halfWidth && y < halfHeight);
@@ -369,13 +380,3 @@ export class Canvas {
     this.context.putImageData(this.imageData, 0, 0);
   }
 }
-
-function clamp(input, min, max) {
-  return Math.min(Math.max(input, min), max);
-}
-
-/*
-Floppy disk by drumdorf is licensed under CC Attribution-ShareAlike
-2017 Year of the Rooster by The Ice Wolves is licensed under CC Attribution
-Small Box Truck by Renafox is licensed under CC Attribution-NonCommercial
-*/
