@@ -1,7 +1,5 @@
 import { Vec4, vec4 } from './maths/vec4';
 
-
-
 // Expected to be RGBA
 export type Texture = {
   width: number;

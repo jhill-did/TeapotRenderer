@@ -1,27 +1,13 @@
 import { Vec2, vec2 } from './maths/vec2';
+import { Vec3 } from './maths/vec3';
 import { Vec4, vec4 } from './maths/vec4';
 import { Texture, loadImage } from './texture';
 import { loadObj } from './model-obj';
 
-type VertexIndices = {
-  v1: number;
-  v2: number;
-  v3: number;
-};
-
-// TODO: This is really obj specific.
-export type Triangle = {
-  vertices: VertexIndices,
-  uvs: VertexIndices,
-  normals: VertexIndices,
-};
-
-// TODO(Jordan): This model format kinda sucks ass.
+// TODO: Would be nice to have indexed model support.
 export type Model = {
-  vertices: Vec4[];
-  uvs: Vec2[];
-  normals: Vec4[];
-  triangles: Triangle[];
+  vertices: Float32Array;
+  vertexSize: number;
   textures: Texture[];
 };
 
@@ -51,7 +37,7 @@ export const loadModel = async (path: string): Promise<Model> => {
   const directory = directoryName(path);
 
   // Check the extension on our model.
-  const modelFormat = modelPath.slice(modelPath.lastIndexOf('.') + 1) as ModelType; // TODO: This is not robus
+  const modelFormat = modelPath.slice(modelPath.lastIndexOf('.') + 1) as ModelType; // TODO: This is not robust
   const load = loaders[modelFormat];
 
   const model = await fetch(join(directory, modelPath))
