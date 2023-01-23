@@ -1,7 +1,6 @@
 import { Graphics } from '../graphics';
 import { Model } from '../model';
 import { Mat4 } from '../maths/mat4';
-import { makePerspectiveMatrix } from '../maths/view';
 
 const makeShader = (gl: WebGL2RenderingContext, source: string, type: number) => {
   const shader = gl.createShader(type)!;

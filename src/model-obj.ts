@@ -1,6 +1,5 @@
 import { Vec2, vec2 } from './maths/vec2';
 import { Vec3, vec3 } from './maths/vec3';
-import { Vec4, vec4 } from './maths/vec4';
 import { Model } from './model';
 
 export function loadObj(objFileData: string): Model {
