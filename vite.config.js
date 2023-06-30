@@ -1,6 +1,4 @@
 // vite.config.js
 export default {
-  server: {
-    base: '/TeapotRenderer/'
-  },
+  base: '/TeapotRenderer/'
 };
