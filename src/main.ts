@@ -16,7 +16,7 @@ const getCanvasContext = () => {
 }
 
 const loadScene = async (): Promise<Model[]> => {
-  const model = await loadModel('/chicken/chicken.json');
+  const model = await loadModel('chicken/chicken.json');
   // const model = await loadModel('/brick-cube/brick-cube.json');
 
   return [model];
