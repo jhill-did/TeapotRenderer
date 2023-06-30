@@ -4,7 +4,8 @@
   "description": "Baby's first software renderer (Expect poor performance).",
   "main": "Core.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "npx vite build"
   },
   "repository": {
     "type": "git",
