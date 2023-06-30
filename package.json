@@ -19,7 +19,6 @@
   },
   "homepage": "https://github.com/puddin482/TeapotRenderer#readme",
   "devDependencies": {
-    "parcel": "^2.8.0",
     "typescript": "^4.9.4"
   },
   "dependencies": {
