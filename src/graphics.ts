@@ -1,5 +1,5 @@
 import { Model } from './model';
-import { Mat4 } from './maths/Mat4';
+import { Mat4 } from './maths/mat4';
 export { makeGraphics as makeSoftwareGraphics } from './graphics-software/software';
 export { makeGraphics as makeWebGlGraphics } from './graphics-webgl/webgl';
 

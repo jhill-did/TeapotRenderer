@@ -24,8 +24,8 @@ const loadScene = async (): Promise<Model[]> => {
 
 const main = async () => {
   const context = getCanvasContext();
-  // const graphics = makeSoftwareGraphics(context);
-  const graphics = makeWebGlGraphics(context);
+  const graphics = makeSoftwareGraphics(context);
+  // const graphics = makeWebGlGraphics(context);
   const [model] = await loadScene();
 
   const drawModel = graphics.makeDrawCall(model);
